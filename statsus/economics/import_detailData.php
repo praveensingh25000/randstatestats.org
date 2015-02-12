@@ -1,0 +1,444 @@
+<?php
+/******************************************
+* @Modified on April 4, 2013
+* @Package: RAND
+* @Developer: Baljinder Singh
+* @URL : http://50.62.142.193/
+* live Site: http://statestats.rand.org/stats/economics/farmincomeUS.html
+********************************************/
+
+$basedir=dirname(__FILE__)."/../..";
+include_once $basedir."/include/headerHtml.php";
+require_once('comgroup.php');
+global $db;
+
+if(!isset($_SESSION['importdetail']) || (isset($_SESSION['importdetail']) && !isset($_SESSION['importdetail']['dbid']))){
+	
+	if(isset($_REQUEST['dbc']) && $_REQUEST['dbc']!='') {
+		header('location: import_detail.php?dbc='.$_REQUEST['dbc'].'');			
+		exit;
+	} else {
+		header('location: import_detail.php');
+		exit;
+	}
+}
+
+$searchedfields = $_SESSION['importdetail'];
+
+//echo "<pre>";print_r($searchedfields);echo "</pre>"; die;
+
+
+$tablesname				= "importdet_qtr_";
+$tablesnamecat			= "import_cats";
+$tablesnamecomm			= "import_commodities";
+$tablesnamecitycodes	= "ctycodes";
+
+
+$admin = new admin();
+
+$joinStr = $tablesStr = "";
+$fieldsStrWhere = '';
+$columnstobefetched = '';
+
+$catname = "";
+$yearArray = array();
+$dbid = trim($searchedfields['dbid']);
+$databaseDetail = $admin->getDatabase($dbid);
+
+$quatersArray = $monthssArray = $columnsToBeShownAsGraph = array();
+
+if(!empty($databaseDetail)){
+
+	$dbname			= stripslashes($databaseDetail['db_title']);
+	$dbsource		= stripslashes($databaseDetail['db_datasource']);
+	$description	= stripslashes($databaseDetail['db_description']);
+	$miscellaneous	= stripslashes($databaseDetail['db_misc']);
+	$nextupdate		= stripslashes($databaseDetail['db_nextupdate']);
+	$table			= stripslashes($databaseDetail['table_name']);
+	$db_geographic	= stripslashes($databaseDetail['db_geographic']);
+	$db_periodicity	= stripslashes($databaseDetail['db_periodicity']);
+	$db_dataseries	= stripslashes($databaseDetail['db_dataseries']);
+	$db_datasource	= stripslashes($databaseDetail['db_source']);
+	$dateupdated	= stripslashes($databaseDetail['date_added']);
+	$db_datasourcelink	= stripslashes($databaseDetail['db_sourcelink']);
+	$formfootnotes		= stripslashes($databaseDetail['formfootnotes']);
+	
+	$allDbTables = $admin->getDatabaseTables($dbid);
+
+	foreach($allDbTables as $keyTable => $tableDetail){
+		$tablesStr .= $tableDetail['table_name'].", ";
+	}
+	
+	$tablesStr = substr($tablesStr, 0 , -2);
+
+	$timeIntervalSettings = $admin->getTimeIntervalSettings($dbid);
+	$search_criteria_details = $admin->selectAllSearchCriteria($dbid);
+	$joinConditions = $admin->getAllJoinConditions($dbid);
+
+
+	if(count($joinConditions)>0){
+		foreach($joinConditions as $joinKey => $joinDetail){
+			$joinStr .= " and ".$joinDetail['primary_table'].".".$joinDetail['primary_table_column']." = ".$joinDetail['foreign_table'].".".$joinDetail['foreign_table_column']." ";
+		}
+	}
+
+	$columnDisplaySettings = $admin->getTableColumnsDisplaySettings($dbid);
+
+	foreach($columnDisplaySettings as $keyColumnDisplay => $columnSettings){
+
+		$tableNameSettings	= $columnSettings['table_name'];
+		$columnNameSettings = $columnSettings['column_name'];
+		$columnstobefetched .= $tableNameSettings.'.'.$columnNameSettings." as `".$columnSettings['display_name']."`,";
+	}
+}
+
+if(!isset($allDbTables) || (isset($allDbTables) && count($allDbTables)<=0)){
+	echo "There are no tables associated with this form yet. Please contact administrator of site.";
+	exit;
+}
+
+if(!empty($searchedfields['commodity'])){
+	$commodityAll = $commodityStr='';
+	foreach($searchedfields['commodity'] as $commodity){
+		$commodityAll.="'".$commodity."'".',';
+	}
+	$commodityStr = substr($commodityAll, 0, -1);
+	$fieldsStrWhere .= " and Commodity in (".$commodityStr.") ";
+}
+
+if(!empty($searchedfields['area'])){
+	$areasAll = $areaStr='';
+	foreach($searchedfields['area'] as $areas){
+		$areasAll.="'".$areas."'".',';
+	}
+	$areaStr = substr($areasAll, 0, -1);
+	$fieldsStrWhere .= " and Area in (".$areaStr.") ";
+}
+
+if(!empty($searchedfields['category'])){
+	$categoryAll = $categoryStr ='';
+	foreach($searchedfields['category'] as $categories){
+		$categoryAll.="'".$categories."'".',';
+	}
+	$categoryStr = substr($categoryAll, 0, -1);
+
+	$fieldsStrWhere .= " and Category in (".$categoryStr.") ";
+}
+
+if(!empty($searchedfields['country'])){
+	$countryAll = $countryStr ='';
+	foreach($searchedfields['country'] as $country){
+		$countryAll.="'".$country."'".',';
+	}
+	$countryStr = substr($countryAll, 0, -1);
+
+	$fieldsStrWhere .= " and Dest in (".$countryStr.") ";
+}
+
+
+$commodities = array();
+$sql = "select * from ".$tablesnamecomm." where com_id in (".$commodityStr.")";
+$searchedDataResultCommodities = $dbDatabase->run_query($sql);
+if(mysql_num_rows($searchedDataResultCommodities)>0){
+	while($rowData = mysql_fetch_assoc($searchedDataResultCommodities)){
+		$commodities[$rowData['com_id']] = $rowData['com_name'];
+	}
+}
+
+$categories = array();
+$sql = "select * from ".$tablesnamecat." where catcode in (".$categoryStr.")";
+$searchedDataResultCategories = $dbDatabase->run_query($sql);
+if(mysql_num_rows($searchedDataResultCategories)>0){
+	while($rowDataCat = mysql_fetch_assoc($searchedDataResultCategories)){
+		$categories[$rowDataCat['catcode']] = $rowDataCat['catname'];
+	}
+}
+
+$destinations = array();
+$sql = "select * from ".$tablesnamecitycodes." where ccode in (".$countryStr.")";
+$searchedDataResultDestinations = $dbDatabase->run_query($sql);
+if(mysql_num_rows($searchedDataResultDestinations)>0){
+	while($rowDataDest = mysql_fetch_assoc($searchedDataResultDestinations)){
+		$destinations[$rowDataDest['ccode']] = $rowDataDest['country'];
+	}
+}
+
+
+$searchedData = array();
+
+for($year=$searchedfields['syear'];$year<=$searchedfields['eyear'];$year++){
+	$tablename = $tablesname.$year;
+
+	$sql = "select * from ".$tablename." where 1 ".$fieldsStrWhere."  limit 4000";
+
+	$searchedDataResult = $dbDatabase->run_query($sql);
+	if(mysql_num_rows($searchedDataResult)>0){
+		while($rowData = mysql_fetch_assoc($searchedDataResult)){
+		
+			$areacode = trim($rowData['Area']);
+
+			$destcode = trim($rowData['Dest']);
+			
+			$area = (isset($areasArray[$areacode]))?$areasArray[$areacode]:'Unknown';
+
+			$dest = $destinations[$destcode];
+
+			$category = (isset($categories[$rowData['Category']]))?$categories[$rowData['Category']]:'Unknown';
+			$commodity = (isset($commodities[$rowData['Commodity']]))?$commodities[$rowData['Commodity']]:'Unknown';
+
+			$arrayRow = array('Area' => $area, 'Destination' => $dest, 'Commodity' => $commodity,'Category' => $category, 'Year' => $rowData['Yr'], 'Units' => $rowData['units']);
+			$quaters = array(1 => "Q1", 2 => "Q2", 3 => "Q3", 4 =>"Q4");
+
+			for($i=$searchedfields['squater'];$i<=$searchedfields['equater'];$i++){
+				$arrayRow[$quaters[$i]] = $rowData[$quaters[$i]];
+			}
+
+			$arrayRow['Total'] = $rowData['Total'];
+
+
+			
+			$searchedData[] = $arrayRow;
+
+		}
+	}
+
+}
+
+unset($_SESSION['query']);
+
+$_SESSION['downloaddata'] = $searchedData;
+
+//$searchedDataResult = $dbDatabase->run_query($sql);
+//$searchedData = $dbDatabase->getall($searchedDataResult);
+?>
+
+ <!-- container -->
+<section id="container">
+ <!-- main div -->
+ <div class="main-cell">	
+
+		<?php
+		if(count($searchedData)>0){
+			$firstRow = $searchedData[0];
+			$nograph = 1;
+		?>
+
+			
+			<h1 class="left"><?php echo ucfirst($dbname); ?></h1>
+			
+			<!-- PAGE LINKS -->
+			<?php include($DOC_ROOT."/subPageLinks.php"); ?>
+			<!-- /PAGE LINKS -->
+
+			<div class="search-table-data" style="<?php if((isset($_GET['graph']) && $_GET['graph']!='gridview')){  ?> display:none; <?php } ?>">
+			<table id="" class="data-table">
+				<thead>
+				<tr>
+					<?php foreach($firstRow as $keyField => $fieldValue){ ?>
+					<th><?php echo ucfirst($keyField); ?></th>
+					<?php } ?>
+				</tr>
+				</thead>
+				<?php 
+				$areaArray = $colorsarray = array();
+				$colors = array("red", "green", "violet", "maroon", "pink", "yellow", "black", "grey", "BlueViolet", "Chartreuse", "Crimson", "DarkMagenta", "blue", "Darkorange");
+				$i=0;
+				$arrayColumns = array();
+				foreach($searchedData as $keyData => $rowData){ 	
+					$strGraph = '';
+					
+				?>
+				<tr>
+					<?php foreach($rowData as $keyField => $fieldValue){ 
+						if(!is_integer($keyField)){
+							$strGraph.= $fieldValue.'-';
+						}else{
+							$arrayColumns[$i][] = (double)$fieldValue;
+						}
+					?>
+					<td align="left">
+						<?php include($DOC_ROOT.'/decimal.php'); ?>
+							<!-- <?php 
+							if(is_numeric($fieldValue) && ($fieldValue < 0 || ($fieldValue == 0 && trim(strtolower($keyField))== 'avg.'))) { 
+								echo 'NA'; 
+							}
+							else if(is_numeric($fieldValue) && trim(strtolower($keyField)) != 'year' && trim(strtolower($keyField))!= 'age'){ 
+								
+								$arrayfield = explode('.',$fieldValue);
+							
+								if (isset($arrayfield[1]) && $arrayfield[1] >0) {
+									echo number_format ($fieldValue, 2);
+								} else {
+									echo number_format ($fieldValue);
+								}
+
+							} else { echo $fieldValue; } ?> -->
+					</td>
+					<?php } ?>
+				</tr>
+				<?php 
+							
+					$strGraph = substr($strGraph,0,-1);
+					$areaArray[$i] = $strGraph;
+
+					$colorpick = array_rand($colors);
+					$colorsarray[$i] = $colors[$colorpick];
+
+					$i++;
+				} 
+				
+			
+				
+
+				$yearQuater = $yearMonth= array();
+				if(isset($columns['quatersascolumns']) && isset($columns['yearsasrows']) && isset($timeIntervalSettings) && ($timeIntervalSettings['time_format'] == 'SQ-SY-EQ-EY' || $timeIntervalSettings['time_format'] == 'SY-EY')){		// When data is as year q1, q2, q3, q4
+					$tempYears = array();
+					$colorsarray = array();
+					foreach($yearArray as $keyY => $year){
+						foreach($quatersArray as $keyQ => $quater){
+							$tempYears[] = $quater.'/'.substr($year, -2); 
+							$yearQuater[$year][$quater] = '';
+						}
+					}
+					$yearArray = $tempYears;
+					
+					$columnsArrayData = array();
+					foreach($searchedData as $keyData => $rowData){ 
+						
+						if(array_key_exists('Area', $rowData) && array_key_exists('Category', $rowData) && array_key_exists('Year', $rowData)){
+							$columnsArrayData[$rowData['Area']][$rowData['Category']][$rowData['Year']] = $rowData;
+						}
+
+					}
+					
+					$arrayColumns = array();
+					$areaArray = array();
+					foreach($columnsArrayData as $area => $areaData){
+						foreach($areaData as $category => $catData){
+							$keyForData = $area.'-'.$category;
+							
+							$arrayToBeInserted = array();
+							$areaArray[] = $keyForData;
+							foreach($yearQuater as $year => $yearQ){
+								if(array_key_exists($year, $catData)){
+
+									foreach($yearQ as $quat => $quaterVal){
+										if(array_key_exists($quat, $catData[$year])){
+											$arrayToBeInserted[] = (double)$catData[$year][$quat];
+										} else {
+											$arrayToBeInserted[] = -0;
+										}
+									}
+								}
+							}
+
+							$arrayColumns[] = $arrayToBeInserted;
+							$colorpick = array_rand($colors);
+							$colorsarray[] = $colors[$colorpick];
+						}
+					}
+
+			
+				} else if(isset($columns['monthsascolumns']) && isset($columns['yearsasrows']) && isset($timeIntervalSettings) && ($timeIntervalSettings['time_format'] == 'SM-SY-EM-EY')){		// When data is as months m01, m02, m03, m04 .. so on
+					$tempMonths = array();
+					$colorsarray = array();
+					foreach($yearArray as $keyY => $year){
+						foreach($monthssArray as $keyQ => $month){
+							$monthsArr = array_flip($months);
+							$tempMonths[] = $year."-".$monthsArr[$month].'-01';  
+							$yearMonth[$year][$month] = '';
+						}
+					}
+					$yearArray = $tempMonths;
+										
+					$columnsArrayData = array();
+					foreach($searchedData as $keyData => $rowData){ 
+						
+						if((array_key_exists('Area', $rowData) || array_key_exists('Park', $rowData)) && array_key_exists('Category', $rowData) && array_key_exists('Year', $rowData)){
+					
+							if(array_key_exists('Area', $rowData)){
+								$columnsArrayData[$rowData['Area']][$rowData['Category']][$rowData['Year']] = $rowData;
+							} else if(array_key_exists('Park', $rowData)){
+								$columnsArrayData[$rowData['Park']][$rowData['Category']][$rowData['Year']] = $rowData;
+							}
+						}
+
+					}
+					
+					$arrayColumns = array();
+					$areaArray = array();
+					foreach($columnsArrayData as $area => $areaData){
+						foreach($areaData as $category => $catData){
+							$keyForData = $area.'-'.$category;
+							
+							$arrayToBeInserted = array();
+							$areaArray[] = $keyForData;
+							foreach($yearMonth as $year => $yearQ){
+								if(array_key_exists($year, $catData)){
+
+									foreach($yearQ as $quat => $quaterVal){
+										if(array_key_exists($quat, $catData[$year])){
+											$arrayToBeInserted[] = (double)$catData[$year][$quat];
+										} else {
+											$arrayToBeInserted[] = 0;
+										}
+									}
+								}
+							}
+
+							$arrayColumns[] = $arrayToBeInserted;
+							$colorpick = array_rand($colors);
+							$colorsarray[] = $colors[$colorpick];
+						}
+					}
+
+			
+				} 
+
+				$yearjson = json_encode($yearArray);	// Chart Bottom Labels
+
+				$regionjson = json_encode($areaArray);	// Chat Keys
+
+				$jsoncolumn =  json_encode($arrayColumns); // Chart Data
+
+				$colorjson = json_encode($colorsarray);	// Chart Color Codes
+
+				$jsoncolumn = substr($jsoncolumn, 0, -1);
+				$jsoncolumn = substr($jsoncolumn, 1);
+
+				?>
+
+				</tbody>
+			</table>
+			</div>
+			
+			<!-- GRAPH VIEW -->
+			<?php include($DOC_ROOT."/graphInclude.php"); ?>
+			<!-- GRAPH VIEW -->
+
+			<!-- Show Notes -->
+			<?php include($DOC_ROOT."/showNotes.php"); ?>
+			<!-- Show Notes -->
+			<p>&nbsp;</p>
+			<?php if(isset($db_datasource) && $db_datasource!=''){ ?>
+			<p><strong>Data Source: </strong><?php if(isset($db_datasourcelink) && $db_datasourcelink != ''){ ?><a target="_blank" href="<?php echo $db_datasourcelink; ?>"><?php }?><?php echo stripslashes($db_datasource); ?><?php if(isset($db_datasourcelink) && $db_datasourcelink != ''){ ?></a><?php } ?>
+			</p>
+			<?php } ?>
+
+		<?php } else { ?>
+			
+			<div class="clear"></div>
+			<div class="pT20 txtcenter"><b>No Records Found For This Search Criteria.</b></div>
+
+		<?php } ?>
+	 <br/>
+
+	<p>
+	<?php echo date('D M d H:i:s Y'); ?>
+	</p>		
+
+</div>
+		
+</section>
+
+<?php include_once $basedir."/include/footerHtml.php"; ?>

@@ -1,0 +1,151 @@
+
+* #page-wrap {
+   /* margin: 0 auto;*/
+    width: 750px;
+}
+#page-wrap table {
+    border-collapse: collapse;
+}
+#page-wrap table td, table th {
+    border: 1px solid black;
+    padding: 5px;
+}
+#headerInvoice {
+    background: none repeat scroll 0 0 #663399;
+    color: white;
+    font: bold 15px Helvetica,Sans-Serif;
+    height: 15px;
+    letter-spacing: 20px;
+    margin: 20px 0;
+    padding: 8px 0;
+    text-align: center;
+    width: 100%;
+}
+#address {
+    float: left;
+    width: 250px;
+}
+#customer {
+    overflow: hidden;
+}
+#customer-title {
+    float: left;
+    font-size: 14px;
+}
+#meta {
+    float: right;
+    margin-top: 1px;
+    width: 300px;
+}
+#meta td {
+    text-align: right;
+}
+#meta td.meta-head {
+    background: none repeat scroll 0 0 #EBEBEB;
+    text-align: left;
+}
+#meta td textarea {
+    height: 20px;
+    text-align: right;
+    width: 100%;
+}
+#items {
+    border: 1px solid black;
+    clear: both;
+    margin: 30px 0 0;
+    width: 100%;
+}
+#items th {
+    background: none repeat scroll 0 0 #EEEEEE;
+}
+#items textarea {
+    height: 50px;
+    width: 80px;
+}
+#items tr.item-row td {
+    border: 0 none;
+    vertical-align: top;
+}
+#items td.description {
+    width: 300px;
+}
+#items td.item-name {
+    width: 250px;
+}
+#items td.qty {
+    width: 200px;
+}
+#items td.description textarea, #items td.item-name textarea {
+    width: 100%;
+}
+#items td.total-line {
+    border-right: 0 none;
+    text-align: right;
+}
+#items td.total-value {
+    border-left: 0 none;
+    padding: 10px;
+}
+#items td.total-value textarea {
+    background: none repeat scroll 0 0 transparent;
+    height: 20px;
+}
+#items td.balance {
+    background: none repeat scroll 0 0 #EEEEEE;
+}
+#items td.blank {
+    border: 0 none;
+}
+#terms {
+    margin: 20px 0 0;
+    text-align: center;
+}
+#terms h5 {
+    border-bottom: 1px solid black;
+    font: 13px Helvetica,Sans-Serif;
+    letter-spacing: 10px;
+    margin: 0 0 8px;
+    padding: 0 0 8px;
+    text-transform: uppercase;
+}
+#terms textarea {
+    text-align: center;
+    width: 100%;
+}
+textarea:hover, textarea:focus, #items td.total-value textarea:hover, #items td.total-value textarea:focus, .delete:hover {
+    background-color: #EEFF88;
+}
+.delete-wpr {
+    position: relative;
+}
+.delete {
+    background: none repeat scroll 0 0 #EEEEEE;
+    border: 1px solid;
+    color: #000000;
+    display: block;
+    font-family: Verdana;
+    font-size: 12px;
+    font-weight: bold;
+    left: -22px;
+    padding: 0 3px;
+    position: absolute;
+    text-decoration: none;
+    top: -6px;
+}
+.item-row {
+    border-bottom: 1px solid black;
+}
+#billingAddress {
+    float: left;
+    padding-right: 10px;
+    width: 215px;
+}
+#shippingAddress {
+    float: left;
+    padding-right: 10px;
+    width: 215px;
+}
+.name {
+    font-size: 12px;
+    font-weight: bold;
+}

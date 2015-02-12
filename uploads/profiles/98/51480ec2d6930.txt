@@ -1,0 +1,10 @@
+Blancsquare.
+
+1.)fix the design of institution page.
+2.)fix the design of Dropdown Menus.
+
+
+Maduhaa
+
+1.) Start Fixing the  blog design.
+2.) Make Headings Backgrounds for different themes and apply in css 
